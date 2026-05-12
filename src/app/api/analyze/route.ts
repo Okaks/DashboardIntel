@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
-import { SYSTEM_PROMPT, buildUserPrompt } from "@/lib/prompts";
+import { SYSTEM_PROMPT, buildUserPrompt } from "../../../lib/prompts";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
