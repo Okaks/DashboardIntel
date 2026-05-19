@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
+import Anthropic from "@anthropic-ai/sdk";
 import { SYSTEM_PROMPT, buildUserPrompt } from "../../../lib/prompts";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
+});
+
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
 export async function POST(req: NextRequest) {
@@ -34,67 +39,64 @@ export async function POST(req: NextRequest) {
     }
 
     const userPrompt = buildUserPrompt(audience, context, format);
-    let messages: OpenAI.Chat.ChatCompletionMessageParam[];
+    const bytes = await file.arrayBuffer();
+    const base64 = Buffer.from(bytes).toString("base64");
+
+    let analysis = "";
 
     if (isImage) {
-      const bytes = await file.arrayBuffer();
-      const base64 = Buffer.from(bytes).toString("base64");
+      // GPT-4o for images
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          {
+            role: "user",
+            content: [
+              { type: "text", text: userPrompt },
+              {
+                type: "image_url",
+                image_url: { url: `data:${mimeType};base64,${base64}` },
+              },
+            ],
+          },
+        ],
+        max_tokens: 1500,
+      });
+      analysis = response.choices[0].message.content || "";
 
-      messages = [
-        {
-          role: "user",
-          content: [
-            { type: "text", text: userPrompt },
-            {
-              type: "image_url",
-              image_url: { url: `data:${mimeType};base64,${base64}` },
-            },
-          ],
-        },
-      ];
     } else {
-      // PDF — extract text using basic buffer reading
-      const bytes = await file.arrayBuffer();
-      const buffer = Buffer.from(bytes);
-      
-      // Extract readable text from PDF buffer
-      const rawText = buffer.toString("latin1");
-      const textMatches = rawText.match(/BT[\s\S]*?ET/g) || [];
-      let extractedText = textMatches
-        .join(" ")
-        .replace(/[^\x20-\x7E\n]/g, " ")
-        .replace(/\s+/g, " ")
-        .trim();
-
-      // Fallback: extract any readable ASCII strings
-      if (extractedText.length < 100) {
-        extractedText = rawText
-          .replace(/[^\x20-\x7E\n]/g, " ")
-          .replace(/\s+/g, " ")
-          .trim()
-          .slice(0, 8000);
-      } else {
-        extractedText = extractedText.slice(0, 8000);
-      }
-
-      messages = [
-        {
-          role: "user",
-          content: `${userPrompt}\n\nDASHBOARD CONTENT (extracted from PDF):\n${extractedText}`,
-        },
-      ];
+      // Claude for PDFs - reads natively with full visual understanding
+      const response = await anthropic.messages.create({
+        model: "claude-opus-4-5",
+        max_tokens: 1500,
+        system: SYSTEM_PROMPT,
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "document",
+                source: {
+                  type: "base64",
+                  media_type: "application/pdf",
+                  data: base64,
+                },
+              },
+              {
+                type: "text",
+                text: userPrompt,
+              },
+            ],
+          },
+        ],
+      });
+      analysis = response.content
+        .filter((block) => block.type === "text")
+        .map((block) => (block as { type: "text"; text: string }).text)
+        .join("\n");
     }
 
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        ...messages,
-      ],
-      max_tokens: 1500,
-    });
-
-    const analysis = response.choices[0].message.content;
     return NextResponse.json({ analysis });
 
   } catch (error) {
