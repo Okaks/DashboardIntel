@@ -22,10 +22,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const bytes = await file.arrayBuffer();
-    const base64 = Buffer.from(bytes).toString("base64");
-    const mimeType = file.type as "image/png" | "image/jpeg" | "application/pdf";
-
+    const mimeType = file.type;
     const isImage = mimeType.startsWith("image/");
     const isPDF = mimeType === "application/pdf";
 
@@ -37,29 +34,56 @@ export async function POST(req: NextRequest) {
     }
 
     const userPrompt = buildUserPrompt(audience, context, format);
+    let messages: OpenAI.Chat.ChatCompletionMessageParam[];
 
-    const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
-      {
-        role: "user",
-        content: [
-          {
-            type: "text",
-            text: userPrompt,
-          },
-          isImage
-            ? {
-                type: "image_url",
-                image_url: {
-                  url: `data:${mimeType};base64,${base64}`,
-                },
-              }
-            : {
-                type: "text",
-                text: `[PDF uploaded — extract and analyse all visible data, metrics, and text from this document.]\nBase64 PDF: data:application/pdf;base64,${base64}`,
-              },
-        ],
-      },
-    ];
+    if (isImage) {
+      const bytes = await file.arrayBuffer();
+      const base64 = Buffer.from(bytes).toString("base64");
+
+      messages = [
+        {
+          role: "user",
+          content: [
+            { type: "text", text: userPrompt },
+            {
+              type: "image_url",
+              image_url: { url: `data:${mimeType};base64,${base64}` },
+            },
+          ],
+        },
+      ];
+    } else {
+      // PDF — extract text using basic buffer reading
+      const bytes = await file.arrayBuffer();
+      const buffer = Buffer.from(bytes);
+      
+      // Extract readable text from PDF buffer
+      const rawText = buffer.toString("latin1");
+      const textMatches = rawText.match(/BT[\s\S]*?ET/g) || [];
+      let extractedText = textMatches
+        .join(" ")
+        .replace(/[^\x20-\x7E\n]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+      // Fallback: extract any readable ASCII strings
+      if (extractedText.length < 100) {
+        extractedText = rawText
+          .replace(/[^\x20-\x7E\n]/g, " ")
+          .replace(/\s+/g, " ")
+          .trim()
+          .slice(0, 8000);
+      } else {
+        extractedText = extractedText.slice(0, 8000);
+      }
+
+      messages = [
+        {
+          role: "user",
+          content: `${userPrompt}\n\nDASHBOARD CONTENT (extracted from PDF):\n${extractedText}`,
+        },
+      ];
+    }
 
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
@@ -71,8 +95,8 @@ export async function POST(req: NextRequest) {
     });
 
     const analysis = response.choices[0].message.content;
-
     return NextResponse.json({ analysis });
+
   } catch (error) {
     console.error("Analysis error:", error);
     return NextResponse.json(
