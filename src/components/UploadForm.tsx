@@ -87,62 +87,98 @@ export default function UploadForm({
     }
   };
 
+  const goldBorder = "1px solid rgba(201,168,76,0.2)";
+  const goldBorderActive = "1px solid rgba(201,168,76,0.7)";
+  const bgSecondary = "#1A1510";
+  const bgTertiary = "#231D16";
+
   return (
-    <div className="space-y-8">
+    <div style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
+
+      {/* File Upload */}
       <div>
-        <label className="block text-xs font-medium tracking-widest text-slate-400 uppercase mb-3">
-          Dashboard or Report
+        <label style={{
+          display: "block", fontSize: "10px", fontWeight: 500,
+          letterSpacing: "0.12em", color: "#9C8A6E", marginBottom: "0.75rem"
+        }}>
+          DASHBOARD OR REPORT
         </label>
         <div
           onClick={() => fileInputRef.current?.click()}
           onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
           onDragLeave={() => setDragOver(false)}
           onDrop={handleDrop}
-          className={`border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-all duration-200 ${
-            dragOver
-              ? "border-blue-500 bg-blue-500/10"
-              : file
-              ? "border-blue-500/50 bg-blue-500/5"
-              : "border-slate-700 hover:border-slate-500"
-          }`}
+          style={{
+            border: dragOver ? goldBorderActive : file ? "1px solid rgba(201,168,76,0.4)" : goldBorder,
+            borderStyle: "dashed",
+            borderRadius: "12px",
+            padding: "3rem 2rem",
+            textAlign: "center",
+            cursor: "pointer",
+            backgroundColor: dragOver ? "rgba(201,168,76,0.05)" : file ? "rgba(201,168,76,0.03)" : bgSecondary,
+            transition: "all 0.2s",
+          }}
         >
           <input
             ref={fileInputRef}
             type="file"
             accept=".png,.jpg,.jpeg,.pdf"
-            className="hidden"
+            style={{ display: "none" }}
             onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
           />
+          {/* Upload icon */}
+          <div style={{
+            width: "40px", height: "40px", borderRadius: "50%",
+            border: "1px solid rgba(201,168,76,0.3)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            margin: "0 auto 1rem"
+          }}>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M8 2v8M5 5l3-3 3 3M2 11v1a2 2 0 002 2h8a2 2 0 002-2v-1" stroke="#C9A84C" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+          </div>
           {file ? (
             <div>
-              <p className="text-blue-400 font-medium text-sm">{file.name}</p>
-              <p className="text-slate-500 text-xs mt-1">
+              <p style={{ color: "#C9A84C", fontSize: "13px", fontWeight: 500 }}>{file.name}</p>
+              <p style={{ color: "#5C4F3A", fontSize: "11px", marginTop: "4px" }}>
                 {(file.size / 1024 / 1024).toFixed(2)} MB · Click to change
               </p>
             </div>
           ) : (
             <div>
-              <p className="text-slate-400 text-sm">Drop your dashboard screenshot or PDF here</p>
-              <p className="text-slate-600 text-xs mt-2">PNG, JPG, PDF supported</p>
+              <p style={{ color: "#9C8A6E", fontSize: "13px" }}>Place your dashboard here</p>
+              <p style={{ color: "#5C4F3A", fontSize: "11px", marginTop: "4px" }}>PNG · JPG · PDF · UP TO 10MB</p>
             </div>
           )}
         </div>
       </div>
 
+      {/* Audience */}
       <div>
-        <label className="block text-xs font-medium tracking-widest text-slate-400 uppercase mb-3">
-          Who is this report for?
+        <label style={{
+          display: "block", fontSize: "10px", fontWeight: 500,
+          letterSpacing: "0.12em", color: "#9C8A6E", marginBottom: "0.75rem"
+        }}>
+          WHO IS THIS FOR?
         </label>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
           {AUDIENCES.map((a) => (
             <button
               key={a}
+              type="button"
               onClick={() => { setAudience(a); onAudienceChange(a); }}
-              className={`px-4 py-2.5 rounded-lg text-sm font-medium border transition-all duration-150 ${
-                audience === a
-                  ? "bg-blue-600 border-blue-600 text-white"
-                  : "border-slate-700 text-slate-400 hover:border-slate-500 hover:text-slate-300"
-              }`}
+              style={{
+                padding: "10px 16px",
+                borderRadius: "8px",
+                border: audience === a ? goldBorderActive : goldBorder,
+                backgroundColor: audience === a ? "rgba(201,168,76,0.08)" : bgSecondary,
+                color: audience === a ? "#C9A84C" : "#9C8A6E",
+                fontSize: "12px",
+                fontWeight: audience === a ? 500 : 400,
+                cursor: "pointer",
+                transition: "all 0.15s",
+                textAlign: "left",
+              }}
             >
               {a}
             </button>
@@ -150,51 +186,98 @@ export default function UploadForm({
         </div>
       </div>
 
+      {/* Format */}
       <div>
-        <label className="block text-xs font-medium tracking-widest text-slate-400 uppercase mb-3">
-          Report format
+        <label style={{
+          display: "block", fontSize: "10px", fontWeight: 500,
+          letterSpacing: "0.12em", color: "#9C8A6E", marginBottom: "0.75rem"
+        }}>
+          REPORT FORMAT
         </label>
-        <div className="space-y-2">
+        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
           {FORMATS.map((f) => (
             <button
               key={f.value}
+              type="button"
               onClick={() => { setFormat(f.value); onFormatChange(f.value); }}
-              className={`w-full text-left px-4 py-3.5 rounded-lg border transition-all duration-150 ${
-                format === f.value
-                  ? "bg-blue-600/10 border-blue-500 text-white"
-                  : "border-slate-700 text-slate-400 hover:border-slate-500"
-              }`}
+              style={{
+                padding: "14px 16px",
+                borderRadius: "8px",
+                border: format === f.value ? goldBorderActive : goldBorder,
+                backgroundColor: format === f.value ? "rgba(201,168,76,0.08)" : bgSecondary,
+                color: "#F5EDE0",
+                fontSize: "13px",
+                cursor: "pointer",
+                transition: "all 0.15s",
+                textAlign: "left",
+              }}
             >
-              <p className={`text-sm font-medium ${format === f.value ? "text-blue-400" : ""}`}>
+              <p style={{ fontWeight: 500, color: format === f.value ? "#C9A84C" : "#F5EDE0", margin: 0 }}>
                 {f.value}
               </p>
-              <p className="text-xs text-slate-500 mt-0.5">{f.description}</p>
+              <p style={{ fontSize: "11px", color: "#5C4F3A", margin: "4px 0 0" }}>
+                {f.description}
+              </p>
             </button>
           ))}
         </div>
       </div>
 
+      {/* Context */}
       <div>
-        <label className="block text-xs font-medium tracking-widest text-slate-400 uppercase mb-3">
-          Context <span className="text-slate-600 normal-case tracking-normal">(recommended)</span>
+        <label style={{
+          display: "block", fontSize: "10px", fontWeight: 500,
+          letterSpacing: "0.12em", color: "#9C8A6E", marginBottom: "0.75rem"
+        }}>
+          CONTEXT <span style={{ color: "#5C4F3A", fontSize: "10px", fontWeight: 400, letterSpacing: 0 }}>(recommended)</span>
         </label>
         <textarea
           value={context}
           onChange={(e) => setContext(e.target.value)}
           rows={4}
           placeholder="e.g. This is our Q3 performance dashboard. We ran a promo campaign in week 2. The team is concerned about churn in the enterprise segment..."
-          className="w-full bg-slate-800/50 border border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-300 placeholder-slate-600 focus:outline-none focus:border-blue-500 resize-none transition-colors"
+          style={{
+            width: "100%",
+            backgroundColor: bgSecondary,
+            border: goldBorder,
+            borderRadius: "10px",
+            padding: "12px 16px",
+            fontSize: "13px",
+            color: "#C9A84C",
+            resize: "none",
+            outline: "none",
+            boxSizing: "border-box",
+            fontFamily: "inherit",
+            lineHeight: 1.6,
+          }}
+          onFocus={(e) => e.target.style.border = goldBorderActive}
+          onBlur={(e) => e.target.style.border = goldBorder}
         />
       </div>
 
-      {error && <p className="text-red-400 text-sm">{error}</p>}
+      {error && (
+        <p style={{ color: "#E8643A", fontSize: "13px", margin: 0 }}>{error}</p>
+      )}
 
       <button
+        type="button"
         onClick={handleSubmit}
         disabled={loading}
-        className="w-full py-4 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:text-slate-500 text-white font-medium text-sm tracking-wide transition-all duration-200"
+        style={{
+          width: "100%",
+          padding: "16px",
+          borderRadius: "10px",
+          border: "none",
+          background: loading ? "#2A2218" : "linear-gradient(135deg, #C9A84C, #A07830)",
+          color: loading ? "#5C4F3A" : "#0E0B08",
+          fontSize: "13px",
+          fontWeight: 600,
+          letterSpacing: "0.05em",
+          cursor: loading ? "not-allowed" : "pointer",
+          transition: "all 0.2s",
+        }}
       >
-        {loading ? "Analysing..." : "Generate Executive Analysis"}
+        {loading ? "ANALYSING..." : "GENERATE THE ANALYSIS"}
       </button>
     </div>
   );

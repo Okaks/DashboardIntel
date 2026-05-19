@@ -1,1 +1,15 @@
 @import "tailwindcss";
+
+:root {
+  --gold-primary: #C9A84C;
+  --gold-highlight: #E8C96A;
+  --gold-shadow: #A07830;
+  --bg-primary: #0E0B08;
+  --bg-secondary: #1A1510;
+  --bg-tertiary: #231D16;
+  --text-headline: #F5EDE0;
+  --text-muted: #9C8A6E;
+  --text-subtle: #5C4F3A;
+  --border-gold: rgba(201, 168, 76, 0.2);
+  --border-gold-active: rgba(201, 168, 76, 0.6);
+}
