@@ -63,7 +63,7 @@ export default function Home() {
                 fontSize: "11px", color: "#C9A84C", letterSpacing: "0.15em",
                 fontWeight: 500, marginBottom: "1.5rem"
               }}>
-                AI · DASHBOARD INTELLIGENCE · VOL. I
+                DASHBOARD INTELLIGENCE
               </p>
               <h1 style={{
                 fontSize: "clamp(2rem, 5vw, 3rem)",
