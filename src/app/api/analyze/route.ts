@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
 import { SYSTEM_PROMPT, buildUserPrompt } from "../../../lib/prompts";
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -42,60 +37,41 @@ export async function POST(req: NextRequest) {
     const bytes = await file.arrayBuffer();
     const base64 = Buffer.from(bytes).toString("base64");
 
-    let analysis = "";
-
-    if (isImage) {
-      // GPT-4o for images
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o",
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
+    const content = isImage
+      ? [
           {
-            role: "user",
-            content: [
-              { type: "text", text: userPrompt },
-              {
-                type: "image_url",
-                image_url: { url: `data:${mimeType};base64,${base64}` },
-              },
-            ],
+            type: "image" as const,
+            source: {
+              type: "base64" as const,
+              media_type: mimeType as "image/png" | "image/jpeg" | "image/gif" | "image/webp",
+              data: base64,
+            },
           },
-        ],
-        max_tokens: 1500,
-      });
-      analysis = response.choices[0].message.content || "";
-
-    } else {
-      // Claude for PDFs - reads natively with full visual understanding
-      const response = await anthropic.messages.create({
-        model: "claude-opus-4-5",
-        max_tokens: 1500,
-        system: SYSTEM_PROMPT,
-        messages: [
+          { type: "text" as const, text: userPrompt },
+        ]
+      : [
           {
-            role: "user",
-            content: [
-              {
-                type: "document",
-                source: {
-                  type: "base64",
-                  media_type: "application/pdf",
-                  data: base64,
-                },
-              },
-              {
-                type: "text",
-                text: userPrompt,
-              },
-            ],
+            type: "document" as const,
+            source: {
+              type: "base64" as const,
+              media_type: "application/pdf" as const,
+              data: base64,
+            },
           },
-        ],
-      });
-      analysis = response.content
-        .filter((block) => block.type === "text")
-        .map((block) => (block as { type: "text"; text: string }).text)
-        .join("\n");
-    }
+          { type: "text" as const, text: userPrompt },
+        ];
+
+    const response = await anthropic.messages.create({
+      model: "claude-opus-4-5",
+      max_tokens: 1500,
+      system: SYSTEM_PROMPT,
+      messages: [{ role: "user", content }],
+    });
+
+    const analysis = response.content
+      .filter((block) => block.type === "text")
+      .map((block) => (block as { type: "text"; text: string }).text)
+      .join("\n");
 
     return NextResponse.json({ analysis });
 

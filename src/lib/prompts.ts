@@ -31,6 +31,9 @@ CORE RULES:
 - Exception: Executive Summary always appears in Structured Narrative reports.
 - Always close with 2-3 forward-looking statements — what leadership 
   should watch, decide, or act on next.
+- Never use markdown formatting — no **bold**, no ## headers, no bullet dashes. 
+  Write in clean prose and plain section headers only. 
+  Use natural language transitions between sections.
 
 AUDIENCE LENSES:
 - CFO / Finance: prioritise risk signals, cost efficiency, 
