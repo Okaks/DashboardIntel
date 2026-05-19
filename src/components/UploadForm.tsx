@@ -243,7 +243,7 @@ export default function UploadForm({
             borderRadius: "10px",
             padding: "12px 16px",
             fontSize: "13px",
-            color: "#C9A84C",
+            color: "#F5EDE0",
             resize: "none",
             outline: "none",
             boxSizing: "border-box",
