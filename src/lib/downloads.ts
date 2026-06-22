@@ -76,15 +76,16 @@ export const downloadWord = async (
         new Paragraph({
           children: [new TextRun({ text: section.title.toUpperCase(), bold: true, size: 22, color: "C9A84C" })],
           heading: HeadingLevel.HEADING_2,
-          spacing: { before: 400, after: 150 },
+          spacing: { before: 480, after: 240 },
         })
       );
     }
     for (const line of section.content) {
       children.push(
         new Paragraph({
-          children: [new TextRun({ text: line, size: 20, color: "2C2C2C" })],
-          spacing: { after: 150 },
+          children: [new TextRun({ text: line, size: 22, color: "2C2C2C" })],
+          spacing: { after: 200, line: 340 },
+          alignment: AlignmentType.JUSTIFIED,
           indent: section.title ? { left: 200 } : undefined,
         })
       );
@@ -119,7 +120,7 @@ export const downloadPDF = (
   doc.setFont("NotoSans-Regular", "normal");
   const sections = parseSections(analysis);
   const pageW = doc.internal.pageSize.getWidth();
-  const margin = 20;
+  const margin = 22;
   const maxW = pageW - margin * 2;
   let y = 20;
 
@@ -159,12 +160,16 @@ export const downloadPDF = (
     doc.setTextColor(44, 44, 44);
 
     for (const line of section.content) {
-      const wrapped = doc.splitTextToSize(line, maxW - (section.title ? 5 : 0));
-      checkPage(wrapped.length * 5 + 3);
-      doc.text(wrapped, section.title ? margin + 5 : margin, y);
-      y += wrapped.length * 5 + 3;
+      const lineWidth = maxW - (section.title ? 5 : 0);
+      const wrapped = doc.splitTextToSize(line, lineWidth);
+      checkPage(wrapped.length * 5.5 + 4);
+      doc.text(wrapped, section.title ? margin + 5 : margin, y, {
+        align: "justify",
+        maxWidth: lineWidth,
+      });
+      y += wrapped.length * 5.5 + 5;
     }
-    y += 4;
+    y += 5;
   }
 
   // Footer
@@ -213,48 +218,58 @@ export const downloadPPT = (
   });
 
   // Content slides — one per section
-  for (const section of sections) {
-   if (section.content.length === 0 || !section.title) continue;
+  const titledSections = sections.filter(s => s.content.length > 0 && s.title);
+  const totalSlides = titledSections.length + 1;
+  let sectionIndex = 0;
+
+  for (const section of titledSections) {
+    sectionIndex++;
     const slide = pptx.addSlide();
     slide.background = { color: BG };
 
-    // Gold top bar
-    slide.addShape(pptx.ShapeType.rect, {
-      x: 0, y: 0, w: 13.33, h: 0.08,
-      fill: { color: GOLD },
-      line: { color: GOLD },
+    // Hairline gold rule at top
+    slide.addShape(pptx.ShapeType.line, {
+      x: 0.5, y: 0.5, w: 0.6, h: 0,
+      line: { color: GOLD, width: 1.5 },
     });
 
-    // Section title
-    if (section.title) {
-      slide.addText(section.title.toUpperCase(), {
-        x: 0.5, y: 0.3, w: 12, h: 0.6,
-        fontSize: 14, bold: true, color: GOLD,
-      });
-      slide.addShape(pptx.ShapeType.line, {
-        x: 0.5, y: 1.0, w: 12, h: 0,
-        line: { color: GOLD, width: 0.3 },
-      });
-    }
+    // Large section number
+    slide.addText(String(sectionIndex).padStart(2, "0"), {
+      x: 11.3, y: 0.3, w: 1.5, h: 0.8,
+      fontSize: 36, color: GOLD, align: "right",
+      fontFace: "Georgia",
+    });
+
+    // Section title — small, tracked-out, label style
+    slide.addText(section.title.toUpperCase(), {
+      x: 0.5, y: 0.7, w: 10, h: 0.5,
+      fontSize: 11, bold: true, color: GOLD,
+      charSpacing: 4,
+    });
 
     // Content
     const contentText = section.content.join("\n\n");
     slide.addText(contentText, {
-      x: 0.5,
-      y: section.title ? 1.2 : 0.5,
-      w: 12,
-      h: section.title ? 5.5 : 6.5,
-      fontSize: 13,
+      x: 0.7,
+      y: 1.6,
+      w: 11.5,
+      h: 5.0,
+      fontSize: 14,
       color: WHITE,
       valign: "top",
       wrap: true,
-      lineSpacingMultiple: 1.4,
+      paraSpaceAfter: 12,
+      lineSpacingMultiple: 1.45,
     });
 
-    // Footer
+    // Footer with page count
     slide.addText("DashboardIntel · For internal use only", {
-      x: 0.5, y: 7.0, w: 12, h: 0.3,
-      fontSize: 8, color: MUTED, align: "center",
+      x: 0.5, y: 7.1, w: 10, h: 0.3,
+      fontSize: 8, color: MUTED, align: "left",
+    });
+    slide.addText(`${sectionIndex + 1} / ${totalSlides}`, {
+      x: 11.3, y: 7.1, w: 1.5, h: 0.3,
+      fontSize: 8, color: MUTED, align: "right",
     });
   }
 
