@@ -246,7 +246,9 @@ export const downloadPPT = (
   });
 
   // ── CONTENT SLIDES ──────────────────────────────────────────────────────
-  const titledSections = sections.filter(s => s.content.length > 0 && s.title);
+  const titledSections = sections.filter(
+    s => s.title && s.content.length > 0 && s.content.join(" ").length >= 100
+  );
   let sectionIndex = 0;
 
   for (const section of titledSections) {
@@ -286,35 +288,32 @@ export const downloadPPT = (
     });
 
     // RIGHT CONTENT AREA
-    // Bullets for multi-point sections, prose for single-paragraph
+    // Content — native bullets give proper hanging indent + autoFit handles overflow
     if (section.content.length > 1) {
-      const runs: pptxgen.TextProps[] = [];
-      section.content.forEach((line, idx) => {
-        runs.push({
-          text: "▸  ",
-          options: { color: GOLD, bold: true, fontSize: 13 },
-        });
-        runs.push({
-          text: line,
-          options: {
-            color: WHITE,
-            fontSize: 13,
-            breakLine: idx < section.content.length - 1,
-          },
-        });
-      });
-      slide.addText(runs, {
+      const items = section.content.map(line => ({
+        text: line,
+        options: {
+          bullet: { code: "25B8", indent: 25 },
+          paraSpaceAfter: 14,
+          color: WHITE,
+        },
+      }));
+      slide.addText(items, {
         x: 4.2, y: 0.8, w: 8.8, h: 5.8,
+        fontSize: 13,
         valign: "top", wrap: true,
-        paraSpaceAfter: 16,
+        align: "left",
         lineSpacingMultiple: 1.4,
+        autoFit: true,
       });
     } else {
       slide.addText(section.content[0], {
         x: 4.2, y: 0.8, w: 8.8, h: 5.8,
         fontSize: 14, color: WHITE,
         valign: "top", wrap: true,
+        align: "left",
         lineSpacingMultiple: 1.55,
+        autoFit: true,
       });
     }
 
