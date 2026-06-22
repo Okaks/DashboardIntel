@@ -190,9 +190,9 @@ export const downloadPPT = (
   const sections = parseSections(analysis);
 
   const BG = "0E0B08";
-  const PANEL = "1A1410";
   const GOLD = "C9A84C";
-  const GOLD_DIM = "8A7434";
+  const GOLD_DEEP = "8A7434";
+  const PANEL_TEXT = "1A1410";
   const MUTED = "9C8A6E";
   const WHITE = "F5EDE0";
 
@@ -200,44 +200,37 @@ export const downloadPPT = (
   const titleSlide = pptx.addSlide();
   titleSlide.background = { color: BG };
 
-  // Left gold accent bar (full height)
   titleSlide.addShape(pptx.ShapeType.rect, {
     x: 0, y: 0, w: 0.15, h: 7.5,
     fill: { color: GOLD }, line: { color: GOLD },
   });
 
-  // Small wordmark top-left
   titleSlide.addText("DASHBOARDINTEL", {
     x: 0.6, y: 0.5, w: 6, h: 0.3,
     fontSize: 10, bold: true, color: GOLD, charSpacing: 6,
   });
 
-  // Big title — centered vertically
   titleSlide.addText("Dashboard\nIntelligence Report", {
     x: 0.6, y: 2.6, w: 12, h: 1.8,
     fontSize: 48, bold: true, color: WHITE,
     fontFace: "Georgia", lineSpacingMultiple: 1.05,
   });
 
-  // Audience/format line
   titleSlide.addText(`${audience}  ·  ${format}`, {
     x: 0.6, y: 4.5, w: 12, h: 0.4,
     fontSize: 14, color: GOLD, charSpacing: 2,
   });
 
-  // Hairline rule
   titleSlide.addShape(pptx.ShapeType.line, {
     x: 0.6, y: 5.05, w: 1.2, h: 0,
-    line: { color: GOLD_DIM, width: 1 },
+    line: { color: GOLD_DEEP, width: 1 },
   });
 
-  // Tagline
   titleSlide.addText("Every number has a story.", {
     x: 0.6, y: 5.2, w: 12, h: 0.4,
     fontSize: 13, color: MUTED, italic: true,
   });
 
-  // Date bottom-right
   titleSlide.addText(new Date().toLocaleDateString("en-GB", {
     day: "numeric", month: "long", year: "numeric"
   }), {
@@ -256,68 +249,61 @@ export const downloadPPT = (
     const slide = pptx.addSlide();
     slide.background = { color: BG };
 
-    // LEFT PANEL — dark with section meta
+    // GOLD LEFT PANEL
     slide.addShape(pptx.ShapeType.rect, {
       x: 0, y: 0, w: 3.8, h: 7.5,
-      fill: { color: PANEL }, line: { color: PANEL },
-    });
-
-    // Thin gold left edge on the panel
-    slide.addShape(pptx.ShapeType.rect, {
-      x: 0, y: 0, w: 0.08, h: 7.5,
       fill: { color: GOLD }, line: { color: GOLD },
     });
 
-    // Section number — large, serif
+    // Section number — large, serif, dark on gold
     slide.addText(String(sectionIndex).padStart(2, "0"), {
       x: 0.5, y: 2.5, w: 3, h: 1.6,
-      fontSize: 80, color: GOLD, fontFace: "Georgia",
+      fontSize: 80, color: PANEL_TEXT, fontFace: "Georgia",
     });
 
-    // Thin rule under number
+    // Hairline rule
     slide.addShape(pptx.ShapeType.line, {
       x: 0.55, y: 4.3, w: 0.8, h: 0,
-      line: { color: GOLD_DIM, width: 1 },
+      line: { color: PANEL_TEXT, width: 1 },
     });
 
-    // Section title — stacked, tracked-out
+    // Section title in panel — dark, tracked-out
     slide.addText(section.title.toUpperCase(), {
       x: 0.55, y: 4.5, w: 3, h: 1.8,
-      fontSize: 14, bold: true, color: WHITE,
+      fontSize: 14, bold: true, color: PANEL_TEXT,
       charSpacing: 4, lineSpacingMultiple: 1.3,
     });
 
-    // RIGHT CONTENT AREA
-    // Content — native bullets give proper hanging indent + autoFit handles overflow
+    // ── RIGHT CONTENT AREA ───────────────────────────────────────────────
+    // Gold section title at top of content
+    slide.addText(section.title.toUpperCase(), {
+      x: 4.2, y: 0.5, w: 8.8, h: 0.4,
+      fontSize: 13, bold: true, color: GOLD,
+      charSpacing: 6,
+    });
+
+    // Body — bullets via newline-joined string (proper hanging indent)
     if (section.content.length > 1) {
-      const items = section.content.map(line => ({
-        text: line,
-        options: {
-          bullet: { code: "25B8", indent: 25 },
-          paraSpaceAfter: 14,
-          color: WHITE,
-        },
-      }));
-      slide.addText(items, {
-        x: 4.2, y: 0.8, w: 8.8, h: 5.8,
-        fontSize: 13,
+      slide.addText(section.content.join("\n"), {
+        x: 4.2, y: 1.2, w: 8.8, h: 5.6,
+        fontSize: 13, color: WHITE,
         valign: "top", wrap: true,
-        align: "left",
+        bullet: { code: "25B8", indent: 22 },
+        paraSpaceAfter: 12,
         lineSpacingMultiple: 1.4,
         autoFit: true,
       });
     } else {
       slide.addText(section.content[0], {
-        x: 4.2, y: 0.8, w: 8.8, h: 5.8,
+        x: 4.2, y: 1.2, w: 8.8, h: 5.6,
         fontSize: 14, color: WHITE,
         valign: "top", wrap: true,
-        align: "left",
         lineSpacingMultiple: 1.55,
         autoFit: true,
       });
     }
 
-    // Footer wordmark — right side only (no page count)
+    // Footer wordmark — right side only
     slide.addText("DashboardIntel", {
       x: 4.2, y: 7.1, w: 8.8, h: 0.3,
       fontSize: 8, color: MUTED, align: "right", charSpacing: 2,
@@ -340,7 +326,7 @@ export const downloadPPT = (
 
   closingSlide.addShape(pptx.ShapeType.line, {
     x: 0.6, y: 4.1, w: 1.2, h: 0,
-    line: { color: GOLD_DIM, width: 1 },
+    line: { color: GOLD_DEEP, width: 1 },
   });
 
   closingSlide.addText("Generated by DashboardIntel  ·  For internal use only", {
