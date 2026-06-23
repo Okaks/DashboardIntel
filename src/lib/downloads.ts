@@ -5,47 +5,86 @@ import "./fonts/NotoSans-normal.js";
 import "./fonts/NotoSans-bold.js";
 import "./fonts/NotoSans-italic.js";
 
-// Clean markdown artifacts from text
-export const cleanText = (text: string) => {
-  return text
-    .replace(/\*\*/g, "")
-    .replace(/##\s/g, "")
-    .replace(/^-\s/gm, "")
-    .replace(/^›\s/gm, "")
-    .trim();
+// ── TYPES ──────────────────────────────────────────────────────────────────
+type ContentItem =
+  | { type: "prose"; text: string }
+  | { type: "bullet"; text: string };
+
+type Section = {
+  title: string;
+  content: ContentItem[];
 };
 
-// Parse analysis into sections
-const parseSections = (analysis: string) => {
-  const lines = analysis.split("\n").filter((l) => l.trim() !== "");
-  const sections: { title: string; content: string[] }[] = [];
-  let current: { title: string; content: string[] } | null = null;
+// ── PARSER ─────────────────────────────────────────────────────────────────
+const parseSections = (analysis: string): Section[] => {
+  const sections: Section[] = [];
+  let current: Section | null = null;
+  let proseBuffer: string[] = [];
 
-  for (const line of lines) {
-    const clean = cleanText(line);
-    if (!clean) continue;
+  const flushProse = () => {
+    if (proseBuffer.length > 0 && current) {
+      current.content.push({
+        type: "prose",
+        text: proseBuffer.join(" ").trim(),
+      });
+      proseBuffer = [];
+    }
+  };
 
-    const isHeader =
-      line.startsWith("## ") ||
-      line.startsWith("# ") ||
-      (line === line.toUpperCase() && line.length > 3 && line.length < 60) ||
-      ["EXECUTIVE SUMMARY", "KEY FINDINGS", "AREAS OF CONCERN",
-       "OPPORTUNITIES", "RECOMMENDED WATCH AREAS", "FORWARD-LOOKING STATEMENTS",
-       "Executive Summary", "Key Findings", "Areas of Concern",
-       "Opportunities", "Recommended Watch Areas"].some(h => clean.startsWith(h));
+  for (const rawLine of analysis.split("\n")) {
+    const line = rawLine.trim();
 
-    if (isHeader) {
+    if (!line) {
+      flushProse();
+      continue;
+    }
+
+    if (line.startsWith("## ")) {
+      flushProse();
       if (current) sections.push(current);
-      current = { title: clean.replace(/^#+\s/, ""), content: [] };
-    } else if (current) {
-      current.content.push(clean);
-    } else {
-      current = { title: "", content: [clean] };
+      current = {
+        title: line.replace(/^##\s+/, "").replace(/\*\*/g, "").trim(),
+        content: [],
+      };
+      continue;
+    }
+
+    if (/^[-•▸]\s+/.test(line)) {
+      flushProse();
+      if (!current) current = { title: "", content: [] };
+      current.content.push({
+        type: "bullet",
+        text: line.replace(/^[-•▸]\s+/, "").replace(/\*\*/g, "").trim(),
+      });
+      continue;
+    }
+
+    if (current) {
+      proseBuffer.push(line.replace(/\*\*/g, ""));
     }
   }
+
+  flushProse();
   if (current) sections.push(current);
+
+  // Fallback: if no sections detected, wrap entire output as ANALYSIS
+  if (sections.length === 0 && analysis.trim()) {
+    sections.push({
+      title: "ANALYSIS",
+      content: [{ type: "prose", text: analysis.replace(/\*\*/g, "").trim() }],
+    });
+  }
+
   return sections;
 };
+
+// ── DISPLAY HELPER (for frontend) ──────────────────────────────────────────
+export const cleanForDisplay = (analysis: string): string =>
+  analysis
+    .replace(/^##\s+/gm, "")
+    .replace(/^[-•]\s+/gm, "•  ")
+    .replace(/\*\*/g, "")
+    .trim();
 
 // ── WORD DOWNLOAD ──────────────────────────────────────────────────────────
 export const downloadWord = async (
@@ -71,6 +110,7 @@ export const downloadWord = async (
 
   for (const section of sections) {
     if (section.content.length === 0) continue;
+
     if (section.title) {
       children.push(
         new Paragraph({
@@ -80,15 +120,26 @@ export const downloadWord = async (
         })
       );
     }
-    for (const line of section.content) {
-      children.push(
-        new Paragraph({
-          children: [new TextRun({ text: line, size: 22, color: "2C2C2C" })],
-          spacing: { after: 200, line: 340 },
-          alignment: AlignmentType.JUSTIFIED,
-          indent: section.title ? { left: 200 } : undefined,
-        })
-      );
+
+    for (const item of section.content) {
+      if (item.type === "bullet") {
+        children.push(
+          new Paragraph({
+            children: [new TextRun({ text: item.text, size: 22, color: "2C2C2C" })],
+            bullet: { level: 0 },
+            spacing: { after: 160, line: 320 },
+          })
+        );
+      } else {
+        children.push(
+          new Paragraph({
+            children: [new TextRun({ text: item.text, size: 22, color: "2C2C2C" })],
+            spacing: { after: 200, line: 340 },
+            alignment: AlignmentType.JUSTIFIED,
+            indent: section.title ? { left: 200 } : undefined,
+          })
+        );
+      }
     }
   }
 
@@ -146,6 +197,7 @@ export const downloadPDF = (
 
   for (const section of sections) {
     if (section.content.length === 0) continue;
+
     if (section.title) {
       checkPage(14);
       doc.setFontSize(11);
@@ -159,22 +211,38 @@ export const downloadPDF = (
     doc.setFontSize(10);
     doc.setTextColor(44, 44, 44);
 
-    for (const line of section.content) {
-      const lineWidth = maxW - (section.title ? 5 : 0);
-      const wrapped = doc.splitTextToSize(line, lineWidth);
-      checkPage(wrapped.length * 5 + 3);
-      doc.text(wrapped, section.title ? margin + 5 : margin, y);
-      y += wrapped.length * 5 + 3;
+    for (const item of section.content) {
+      if (item.type === "bullet") {
+        const bulletIndent = 6;
+        const textWidth = maxW - bulletIndent - (section.title ? 5 : 0);
+        const wrapped = doc.splitTextToSize(item.text, textWidth);
+        checkPage(wrapped.length * 5 + 2);
+        doc.setTextColor(201, 168, 76);
+        doc.text("▸", margin + (section.title ? 5 : 0), y);
+        doc.setTextColor(44, 44, 44);
+        doc.text(wrapped, margin + bulletIndent + (section.title ? 5 : 0), y);
+        y += wrapped.length * 5 + 2;
+      } else {
+        const lineWidth = maxW - (section.title ? 5 : 0);
+        const wrapped = doc.splitTextToSize(item.text, lineWidth);
+        checkPage(wrapped.length * 5 + 3);
+        doc.text(wrapped, section.title ? margin + 5 : margin, y);
+        y += wrapped.length * 5 + 3;
+      }
     }
     y += 3;
   }
 
-  // Footer
-  doc.setFontSize(8);
-  doc.setTextColor(156, 138, 110);
-  doc.setFont("NotoSans-Italic", "italic");
-  doc.text("Generated by DashboardIntel · For internal use only · Not financial or legal advice",
-    pageW / 2, 285, { align: "center" });
+  // Footer on every page
+  const totalPages = doc.getNumberOfPages();
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    doc.setFontSize(8);
+    doc.setTextColor(156, 138, 110);
+    doc.setFont("NotoSans-Italic", "italic");
+    doc.text("Generated by DashboardIntel · For internal use only · Not financial or legal advice",
+      pageW / 2, 285, { align: "center" });
+  }
 
   doc.save(`DashboardIntel_${audience.replace(/\//g, "-")}_${format.replace(/\s/g, "_")}.pdf`);
 };
@@ -195,6 +263,10 @@ export const downloadPPT = (
   const PANEL_TEXT = "1A1410";
   const MUTED = "9C8A6E";
   const WHITE = "F5EDE0";
+
+  const f = format.toLowerCase();
+  const isOnePageBrief = f.includes("one-page") || f.includes("one page");
+  const isStructured = f.includes("structured") || f.includes("narrative");
 
   // ── TITLE SLIDE ─────────────────────────────────────────────────────────
   const titleSlide = pptx.addSlide();
@@ -239,100 +311,199 @@ export const downloadPPT = (
   });
 
   // ── CONTENT SLIDES ──────────────────────────────────────────────────────
-  const titledSections = sections.filter(
-    s => s.title && s.content.length > 0 && s.content.join(" ").length >= 100
-  );
-  let sectionIndex = 0;
-
-  for (const section of titledSections) {
-    sectionIndex++;
+  if (isOnePageBrief) {
+    // ONE-PAGE BRIEF: single content slide combining KEY FINDINGS + RECOMMENDATIONS
     const slide = pptx.addSlide();
     slide.background = { color: BG };
 
-    // GOLD LEFT PANEL
     slide.addShape(pptx.ShapeType.rect, {
       x: 0, y: 0, w: 3.8, h: 7.5,
       fill: { color: GOLD }, line: { color: GOLD },
     });
 
-    // Section number — large, serif, dark on gold
-    slide.addText(String(sectionIndex).padStart(2, "0"), {
+    slide.addText("BRIEF", {
       x: 0.5, y: 2.5, w: 3, h: 1.6,
-      fontSize: 80, color: PANEL_TEXT, fontFace: "Georgia",
+      fontSize: 72, color: PANEL_TEXT, fontFace: "Georgia",
     });
 
-    // Hairline rule
     slide.addShape(pptx.ShapeType.line, {
       x: 0.55, y: 4.3, w: 0.8, h: 0,
       line: { color: PANEL_TEXT, width: 1 },
     });
 
-    // Section title in panel — dark, tracked-out
-    slide.addText(section.title.toUpperCase(), {
-      x: 0.55, y: 4.5, w: 3, h: 1.8,
-      fontSize: 14, bold: true, color: PANEL_TEXT,
+    slide.addText(audience.toUpperCase(), {
+      x: 0.55, y: 4.5, w: 3, h: 1.0,
+      fontSize: 12, bold: true, color: PANEL_TEXT,
       charSpacing: 4, lineSpacingMultiple: 1.3,
     });
 
-    // ── RIGHT CONTENT AREA ───────────────────────────────────────────────
-    // Gold section title at top of content
-    slide.addText(section.title.toUpperCase(), {
-      x: 4.2, y: 0.5, w: 8.8, h: 0.4,
-      fontSize: 13, bold: true, color: GOLD,
-      charSpacing: 6,
-    });
+    const findings = sections.find(s => s.title.toUpperCase().includes("FINDING"));
+    const recs = sections.find(s =>
+      s.title.toUpperCase().includes("RECOMMEND") || s.title.toUpperCase().includes("ACTION")
+    );
 
-    // Body — bullets via newline-joined string (proper hanging indent)
-    if (section.content.length > 1) {
-      slide.addText(section.content.join("\n"), {
-        x: 4.2, y: 1.2, w: 8.8, h: 5.6,
-        fontSize: 13, color: WHITE,
+    let yPos = 0.5;
+
+    if (findings && findings.content.length > 0) {
+      slide.addText("KEY FINDINGS", {
+        x: 4.2, y: yPos, w: 8.8, h: 0.4,
+        fontSize: 13, bold: true, color: GOLD, charSpacing: 6,
+      });
+
+      const findingsText = findings.content
+        .filter(i => i.type === "bullet")
+        .map(i => i.text).join("\n");
+
+      slide.addText(findingsText, {
+        x: 4.2, y: yPos + 0.5, w: 8.8, h: 2.7,
+        fontSize: 12, color: WHITE,
         valign: "top", wrap: true,
         bullet: { code: "25B8", indent: 22 },
-        paraSpaceAfter: 12,
-        lineSpacingMultiple: 1.4,
+        paraSpaceAfter: 8,
+        lineSpacingMultiple: 1.35,
         autoFit: true,
       });
-    } else {
-      slide.addText(section.content[0], {
-        x: 4.2, y: 1.2, w: 8.8, h: 5.6,
-        fontSize: 14, color: WHITE,
+
+      yPos = 3.6;
+    }
+
+    if (recs && recs.content.length > 0) {
+      slide.addText("RECOMMENDATIONS", {
+        x: 4.2, y: yPos, w: 8.8, h: 0.4,
+        fontSize: 13, bold: true, color: GOLD, charSpacing: 6,
+      });
+
+      const recsText = recs.content
+        .filter(i => i.type === "bullet")
+        .map(i => i.text).join("\n");
+
+      slide.addText(recsText, {
+        x: 4.2, y: yPos + 0.5, w: 8.8, h: 2.7,
+        fontSize: 12, color: WHITE,
         valign: "top", wrap: true,
-        lineSpacingMultiple: 1.55,
+        bullet: { code: "25B8", indent: 22 },
+        paraSpaceAfter: 8,
+        lineSpacingMultiple: 1.35,
         autoFit: true,
       });
     }
 
-    // Footer wordmark — right side only
     slide.addText("DashboardIntel", {
       x: 4.2, y: 7.1, w: 8.8, h: 0.3,
       fontSize: 8, color: MUTED, align: "right", charSpacing: 2,
     });
+  } else {
+    // STRUCTURED NARRATIVE or BULLET HIGHLIGHTS: one slide per section
+    const renderable = sections.filter(s => s.title && s.content.length > 0);
+
+    renderable.forEach((section, idx) => {
+      const slide = pptx.addSlide();
+      slide.background = { color: BG };
+
+      slide.addShape(pptx.ShapeType.rect, {
+        x: 0, y: 0, w: 3.8, h: 7.5,
+        fill: { color: GOLD }, line: { color: GOLD },
+      });
+
+      slide.addText(String(idx + 1).padStart(2, "0"), {
+        x: 0.5, y: 2.5, w: 3, h: 1.6,
+        fontSize: 80, color: PANEL_TEXT, fontFace: "Georgia",
+      });
+
+      slide.addShape(pptx.ShapeType.line, {
+        x: 0.55, y: 4.3, w: 0.8, h: 0,
+        line: { color: PANEL_TEXT, width: 1 },
+      });
+
+      slide.addText(section.title.toUpperCase(), {
+        x: 0.55, y: 4.5, w: 3, h: 1.8,
+        fontSize: 14, bold: true, color: PANEL_TEXT,
+        charSpacing: 4, lineSpacingMultiple: 1.3,
+      });
+
+      slide.addText(section.title.toUpperCase(), {
+        x: 4.2, y: 0.5, w: 8.8, h: 0.4,
+        fontSize: 13, bold: true, color: GOLD, charSpacing: 6,
+      });
+
+      const bullets = section.content.filter(i => i.type === "bullet");
+      const prose = section.content.filter(i => i.type === "prose");
+
+      if (bullets.length > 0 && prose.length === 0) {
+        const bulletText = bullets.map(b => b.text).join("\n");
+        slide.addText(bulletText, {
+          x: 4.2, y: 1.2, w: 8.8, h: 5.6,
+          fontSize: 13, color: WHITE,
+          valign: "top", wrap: true,
+          bullet: { code: "25B8", indent: 22 },
+          paraSpaceAfter: 12,
+          lineSpacingMultiple: 1.4,
+          autoFit: true,
+        });
+      } else if (prose.length > 0 && bullets.length === 0) {
+        const proseText = prose.map(p => p.text).join("\n\n");
+        slide.addText(proseText, {
+          x: 4.2, y: 1.2, w: 8.8, h: 5.6,
+          fontSize: 13, color: WHITE,
+          valign: "top", wrap: true,
+          paraSpaceAfter: 14,
+          lineSpacingMultiple: 1.5,
+          autoFit: true,
+        });
+      } else {
+        const proseText = prose.map(p => p.text).join("\n\n");
+        slide.addText(proseText, {
+          x: 4.2, y: 1.2, w: 8.8, h: 3.0,
+          fontSize: 12, color: WHITE,
+          valign: "top", wrap: true,
+          paraSpaceAfter: 10,
+          lineSpacingMultiple: 1.4,
+          autoFit: true,
+        });
+        const bulletText = bullets.map(b => b.text).join("\n");
+        slide.addText(bulletText, {
+          x: 4.2, y: 4.3, w: 8.8, h: 2.5,
+          fontSize: 12, color: WHITE,
+          valign: "top", wrap: true,
+          bullet: { code: "25B8", indent: 22 },
+          paraSpaceAfter: 8,
+          lineSpacingMultiple: 1.4,
+          autoFit: true,
+        });
+      }
+
+      slide.addText("DashboardIntel", {
+        x: 4.2, y: 7.1, w: 8.8, h: 0.3,
+        fontSize: 8, color: MUTED, align: "right", charSpacing: 2,
+      });
+    });
+
+    // Closing slide for Structured Narrative only
+    if (isStructured) {
+      const closing = pptx.addSlide();
+      closing.background = { color: BG };
+
+      closing.addShape(pptx.ShapeType.rect, {
+        x: 0, y: 0, w: 0.15, h: 7.5,
+        fill: { color: GOLD }, line: { color: GOLD },
+      });
+
+      closing.addText("End of report.", {
+        x: 0.6, y: 3.0, w: 12, h: 1.0,
+        fontSize: 36, color: WHITE, fontFace: "Georgia", italic: true,
+      });
+
+      closing.addShape(pptx.ShapeType.line, {
+        x: 0.6, y: 4.1, w: 1.2, h: 0,
+        line: { color: GOLD_DEEP, width: 1 },
+      });
+
+      closing.addText("Generated by DashboardIntel  ·  For internal use only", {
+        x: 0.6, y: 4.3, w: 12, h: 0.4,
+        fontSize: 11, color: MUTED, charSpacing: 1,
+      });
+    }
   }
-
-  // ── CLOSING SLIDE ───────────────────────────────────────────────────────
-  const closingSlide = pptx.addSlide();
-  closingSlide.background = { color: BG };
-
-  closingSlide.addShape(pptx.ShapeType.rect, {
-    x: 0, y: 0, w: 0.15, h: 7.5,
-    fill: { color: GOLD }, line: { color: GOLD },
-  });
-
-  closingSlide.addText("End of report.", {
-    x: 0.6, y: 3.0, w: 12, h: 1.0,
-    fontSize: 36, color: WHITE, fontFace: "Georgia", italic: true,
-  });
-
-  closingSlide.addShape(pptx.ShapeType.line, {
-    x: 0.6, y: 4.1, w: 1.2, h: 0,
-    line: { color: GOLD_DEEP, width: 1 },
-  });
-
-  closingSlide.addText("Generated by DashboardIntel  ·  For internal use only", {
-    x: 0.6, y: 4.3, w: 12, h: 0.4,
-    fontSize: 11, color: MUTED, charSpacing: 1,
-  });
 
   pptx.writeFile({ fileName: `DashboardIntel_${audience.replace(/\//g, "-")}_${format.replace(/\s/g, "_")}.pptx` });
 };

@@ -1,6 +1,6 @@
 "use client";
 
-import { downloadWord, downloadPDF, downloadPPT } from "../lib/downloads";
+import { downloadWord, downloadPDF, downloadPPT, cleanForDisplay } from "../lib/downloads";
 
 interface AnalysisResultProps {
   analysis: string;
