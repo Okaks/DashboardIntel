@@ -216,21 +216,27 @@ export const downloadPDF = (
         const bulletIndent = 6;
         const textWidth = maxW - bulletIndent - (section.title ? 5 : 0);
         const wrapped = doc.splitTextToSize(item.text, textWidth);
-        checkPage(wrapped.length * 5 + 2);
+        const lineHeight = 5.8;
+        checkPage(wrapped.length * lineHeight + 5);
         doc.setTextColor(201, 168, 76);
         doc.text("▸", margin + (section.title ? 5 : 0), y);
         doc.setTextColor(44, 44, 44);
-        doc.text(wrapped, margin + bulletIndent + (section.title ? 5 : 0), y);
-        y += wrapped.length * 5 + 2;
+        doc.text(wrapped, margin + bulletIndent + (section.title ? 5 : 0), y, {
+          lineHeightFactor: 1.5,
+        });
+        y += wrapped.length * lineHeight + 5;
       } else {
         const lineWidth = maxW - (section.title ? 5 : 0);
         const wrapped = doc.splitTextToSize(item.text, lineWidth);
-        checkPage(wrapped.length * 5 + 3);
-        doc.text(wrapped, section.title ? margin + 5 : margin, y);
-        y += wrapped.length * 5 + 3;
+        const lineHeight = 5.8;
+        checkPage(wrapped.length * lineHeight + 6);
+        doc.text(wrapped, section.title ? margin + 5 : margin, y, {
+          lineHeightFactor: 1.5,
+        });
+        y += wrapped.length * lineHeight + 6;
       }
     }
-    y += 3;
+    y += 6;
   }
 
   // Footer on every page
@@ -311,86 +317,95 @@ export const downloadPPT = (
   });
 
   // ── CONTENT SLIDES ──────────────────────────────────────────────────────
-  if (isOnePageBrief) {
-    // ONE-PAGE BRIEF: single content slide combining KEY FINDINGS + RECOMMENDATIONS
-    const slide = pptx.addSlide();
-    slide.background = { color: BG };
-
-    slide.addShape(pptx.ShapeType.rect, {
-      x: 0, y: 0, w: 3.8, h: 7.5,
-      fill: { color: GOLD }, line: { color: GOLD },
-    });
-
-    slide.addText("BRIEF", {
-      x: 0.5, y: 2.5, w: 3, h: 1.6,
-      fontSize: 72, color: PANEL_TEXT, fontFace: "Georgia",
-    });
-
-    slide.addShape(pptx.ShapeType.line, {
-      x: 0.55, y: 4.3, w: 0.8, h: 0,
-      line: { color: PANEL_TEXT, width: 1 },
-    });
-
-    slide.addText(audience.toUpperCase(), {
-      x: 0.55, y: 4.5, w: 3, h: 1.0,
-      fontSize: 12, bold: true, color: PANEL_TEXT,
-      charSpacing: 4, lineSpacingMultiple: 1.3,
-    });
-
+if (isOnePageBrief) {
     const findings = sections.find(s => s.title.toUpperCase().includes("FINDING"));
     const recs = sections.find(s =>
       s.title.toUpperCase().includes("RECOMMEND") || s.title.toUpperCase().includes("ACTION")
     );
 
-    let yPos = 0.5;
+    const briefSlides: { label: string; section: typeof findings }[] = [];
+    if (findings) briefSlides.push({ label: "KEY FINDINGS", section: findings });
+    if (recs) briefSlides.push({ label: "RECOMMENDATIONS", section: recs });
 
-    if (findings && findings.content.length > 0) {
-      slide.addText("KEY FINDINGS", {
-        x: 4.2, y: yPos, w: 8.8, h: 0.4,
+    briefSlides.forEach(({ label, section }, idx) => {
+      if (!section) return;
+      const slide = pptx.addSlide();
+      slide.background = { color: BG };
+
+      // Gold left panel
+      slide.addShape(pptx.ShapeType.rect, {
+        x: 0, y: 0, w: 3.8, h: 7.5,
+        fill: { color: GOLD }, line: { color: GOLD },
+      });
+
+      // Section number
+      slide.addText(String(idx + 1).padStart(2, "0"), {
+        x: 0.5, y: 2.5, w: 3, h: 1.6,
+        fontSize: 80, color: PANEL_TEXT, fontFace: "Georgia",
+      });
+
+      slide.addShape(pptx.ShapeType.line, {
+        x: 0.55, y: 4.3, w: 0.8, h: 0,
+        line: { color: PANEL_TEXT, width: 1 },
+      });
+
+      // Panel title
+      slide.addText(label, {
+        x: 0.55, y: 4.5, w: 3, h: 1.0,
+        fontSize: 14, bold: true, color: PANEL_TEXT,
+        charSpacing: 4, lineSpacingMultiple: 1.3,
+      });
+
+      // Right-side title
+      slide.addText(label, {
+        x: 4.2, y: 0.5, w: 8.8, h: 0.4,
         fontSize: 13, bold: true, color: GOLD, charSpacing: 6,
       });
 
-      const findingsText = findings.content
+      // Bullets
+      const bulletText = section.content
         .filter(i => i.type === "bullet")
         .map(i => i.text).join("\n");
 
-      slide.addText(findingsText, {
-        x: 4.2, y: yPos + 0.5, w: 8.8, h: 2.7,
-        fontSize: 12, color: WHITE,
+      slide.addText(bulletText, {
+        x: 4.2, y: 1.2, w: 8.8, h: 5.6,
+        fontSize: 13, color: WHITE,
         valign: "top", wrap: true,
         bullet: { code: "25B8", indent: 22 },
-        paraSpaceAfter: 8,
-        lineSpacingMultiple: 1.35,
+        paraSpaceAfter: 12,
+        lineSpacingMultiple: 1.45,
         autoFit: true,
       });
 
-      yPos = 3.6;
-    }
-
-    if (recs && recs.content.length > 0) {
-      slide.addText("RECOMMENDATIONS", {
-        x: 4.2, y: yPos, w: 8.8, h: 0.4,
-        fontSize: 13, bold: true, color: GOLD, charSpacing: 6,
+      // Footer
+      slide.addText("DashboardIntel", {
+        x: 4.2, y: 7.1, w: 8.8, h: 0.3,
+        fontSize: 8, color: MUTED, align: "right", charSpacing: 2,
       });
+    });
 
-      const recsText = recs.content
-        .filter(i => i.type === "bullet")
-        .map(i => i.text).join("\n");
+    // Closing slide for One-Page Brief
+    const closing = pptx.addSlide();
+    closing.background = { color: BG };
 
-      slide.addText(recsText, {
-        x: 4.2, y: yPos + 0.5, w: 8.8, h: 2.7,
-        fontSize: 12, color: WHITE,
-        valign: "top", wrap: true,
-        bullet: { code: "25B8", indent: 22 },
-        paraSpaceAfter: 8,
-        lineSpacingMultiple: 1.35,
-        autoFit: true,
-      });
-    }
+    closing.addShape(pptx.ShapeType.rect, {
+      x: 0, y: 0, w: 0.15, h: 7.5,
+      fill: { color: GOLD }, line: { color: GOLD },
+    });
 
-    slide.addText("DashboardIntel", {
-      x: 4.2, y: 7.1, w: 8.8, h: 0.3,
-      fontSize: 8, color: MUTED, align: "right", charSpacing: 2,
+    closing.addText("Thank you.", {
+      x: 0.6, y: 3.0, w: 12, h: 1.0,
+      fontSize: 36, color: WHITE, fontFace: "Georgia", italic: true,
+    });
+
+    closing.addShape(pptx.ShapeType.line, {
+      x: 0.6, y: 4.1, w: 1.2, h: 0,
+      line: { color: GOLD_DEEP, width: 1 },
+    });
+
+    closing.addText("Generated by DashboardIntel  ·  For internal use only", {
+      x: 0.6, y: 4.3, w: 12, h: 0.4,
+      fontSize: 11, color: MUTED, charSpacing: 1,
     });
   } else {
     // STRUCTURED NARRATIVE or BULLET HIGHLIGHTS: one slide per section
