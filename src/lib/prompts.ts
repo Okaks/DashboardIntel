@@ -103,7 +103,23 @@ Sections marked ALWAYS must always appear, even if briefly. Sections marked COND
 ALWAYS. Prose. One to two paragraphs orienting the reader to the most important findings and the overall state of the business.
 
 ## DASHBOARD ANALYSIS
-ALWAYS. Prose. One to three paragraphs delivering the deep interpretive analysis — what the data actually means, how the metrics relate to each other, and what story the dashboard tells. This is the analytical core of the report.
+ALWAYS. The analytical core of the report. Output 3 to 5 topics. Each topic follows this exact shape:
+
+1. One framing sentence stating the topic's core finding (no metrics in the sentence — the framing is the "so what").
+2. A blank line.
+3. 2 to 4 bullets directly under it, each containing the metrics, comparisons, or evidence that support the framing sentence.
+
+Example shape (do not copy the wording):
+
+Revenue concentration poses the primary structural risk to margin stability.
+
+- Personal Loan and Business Loan generate 55% of fee income at ₦927M
+- Lagos alone contributes 40% of geographic revenue at ₦664M
+- Wallet & Transfers sits at ₦309M (19% of revenue) — the only meaningful diversification asset
+
+Separate each topic from the next with a blank line. Aim for enough total content to fill 2 to 3 presentation slides — typically 3 to 5 topics with 2 to 4 bullets each.
+
+Do not repeat content from EXECUTIVE SUMMARY or KEY FINDINGS. This section is the deeper interpretive layer.
 
 ## KEY FINDINGS
 ALWAYS. Bullets only.

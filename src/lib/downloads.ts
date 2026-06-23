@@ -441,51 +441,36 @@ if (isOnePageBrief) {
         fontSize: 13, bold: true, color: GOLD, charSpacing: 6,
       });
 
-      const bullets = section.content.filter(i => i.type === "bullet");
-      const prose = section.content.filter(i => i.type === "prose");
+      // Build content as ordered text runs — prose and bullets render in document order
+      const runs = section.content.map((item, i) => {
+        const isLast = i === section.content.length - 1;
+        if (item.type === "bullet") {
+          return {
+            text: item.text,
+            options: {
+              bullet: { code: "25B8", indent: 22 },
+              breakLine: !isLast,
+              paraSpaceAfter: 8,
+            },
+          };
+        }
+        return {
+          text: item.text,
+          options: {
+            breakLine: !isLast,
+            paraSpaceAfter: 14,
+          },
+        };
+      });
 
-      if (bullets.length > 0 && prose.length === 0) {
-        const bulletText = bullets.map(b => b.text).join("\n");
-        slide.addText(bulletText, {
-          x: 4.2, y: 1.2, w: 8.8, h: 5.6,
-          fontSize: 13, color: WHITE,
-          valign: "top", wrap: true,
-          bullet: { code: "25B8", indent: 22 },
-          paraSpaceAfter: 12,
-          lineSpacingMultiple: 1.4,
-          autoFit: true,
-        });
-      } else if (prose.length > 0 && bullets.length === 0) {
-        const proseText = prose.map(p => p.text).join("\n\n");
-        slide.addText(proseText, {
-          x: 4.2, y: 1.2, w: 8.8, h: 5.6,
-          fontSize: 13, color: WHITE,
-          valign: "top", wrap: true,
-          paraSpaceAfter: 14,
-          lineSpacingMultiple: 1.5,
-          autoFit: true,
-        });
-      } else {
-        const proseText = prose.map(p => p.text).join("\n\n");
-        slide.addText(proseText, {
-          x: 4.2, y: 1.2, w: 8.8, h: 3.0,
-          fontSize: 12, color: WHITE,
-          valign: "top", wrap: true,
-          paraSpaceAfter: 10,
-          lineSpacingMultiple: 1.4,
-          autoFit: true,
-        });
-        const bulletText = bullets.map(b => b.text).join("\n");
-        slide.addText(bulletText, {
-          x: 4.2, y: 4.3, w: 8.8, h: 2.5,
-          fontSize: 12, color: WHITE,
-          valign: "top", wrap: true,
-          bullet: { code: "25B8", indent: 22 },
-          paraSpaceAfter: 8,
-          lineSpacingMultiple: 1.4,
-          autoFit: true,
-        });
-      }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      slide.addText(runs as any, {
+        x: 4.2, y: 1.2, w: 8.8, h: 5.6,
+        fontSize: 13, color: WHITE,
+        valign: "top", wrap: true,
+        lineSpacingMultiple: 1.4,
+        autoFit: true,
+      });
 
       slide.addText("DashboardIntel", {
         x: 4.2, y: 7.1, w: 8.8, h: 0.3,
