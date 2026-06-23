@@ -411,7 +411,33 @@ if (isOnePageBrief) {
     // STRUCTURED NARRATIVE or BULLET HIGHLIGHTS: one slide per section
     const renderable = sections.filter(s => s.title && s.content.length > 0);
 
-    renderable.forEach((section, idx) => {
+    // Expand sections: DASHBOARD ANALYSIS splits into one slide per topic (sentence + bullets)
+    type SlideUnit = { title: string; content: ContentItem[] };
+    const slideUnits: SlideUnit[] = [];
+
+    renderable.forEach((section) => {
+      const isAnalysis = section.title.toUpperCase().includes("DASHBOARD ANALYSIS");
+
+      if (!isAnalysis) {
+        slideUnits.push({ title: section.title, content: section.content });
+        return;
+      }
+
+      // Split DASHBOARD ANALYSIS into topic chunks: each prose item starts a new chunk
+      let chunk: ContentItem[] = [];
+      for (const item of section.content) {
+        if (item.type === "prose" && chunk.length > 0) {
+          slideUnits.push({ title: section.title, content: chunk });
+          chunk = [];
+        }
+        chunk.push(item);
+      }
+      if (chunk.length > 0) {
+        slideUnits.push({ title: section.title, content: chunk });
+      }
+    });
+
+    slideUnits.forEach((unit, idx) => {
       const slide = pptx.addSlide();
       slide.background = { color: BG };
 
@@ -430,20 +456,19 @@ if (isOnePageBrief) {
         line: { color: PANEL_TEXT, width: 1 },
       });
 
-      slide.addText(section.title.toUpperCase(), {
+      slide.addText(unit.title.toUpperCase(), {
         x: 0.55, y: 4.5, w: 3, h: 1.8,
         fontSize: 14, bold: true, color: PANEL_TEXT,
         charSpacing: 4, lineSpacingMultiple: 1.3,
       });
 
-      slide.addText(section.title.toUpperCase(), {
+      slide.addText(unit.title.toUpperCase(), {
         x: 4.2, y: 0.5, w: 8.8, h: 0.4,
         fontSize: 13, bold: true, color: GOLD, charSpacing: 6,
       });
 
-      // Build content as ordered text runs — prose and bullets render in document order
-      const runs = section.content.map((item, i) => {
-        const isLast = i === section.content.length - 1;
+      const runs = unit.content.map((item, i) => {
+        const isLast = i === unit.content.length - 1;
         if (item.type === "bullet") {
           return {
             text: item.text,
@@ -466,10 +491,9 @@ if (isOnePageBrief) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       slide.addText(runs as any, {
         x: 4.2, y: 1.2, w: 8.8, h: 5.6,
-        fontSize: 13, color: WHITE,
+        fontSize: 14, color: WHITE,
         valign: "top", wrap: true,
         lineSpacingMultiple: 1.4,
-        autoFit: true,
       });
 
       slide.addText("DashboardIntel", {
