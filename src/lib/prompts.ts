@@ -102,6 +102,10 @@ Sections marked ALWAYS must always appear, even if briefly. Sections marked COND
 ## EXECUTIVE SUMMARY
 ALWAYS. Prose. One to two paragraphs orienting the reader to the most important findings and the overall state of the business.
 
+## KEY FINDINGS
+ALWAYS. Bullets only.
+- 3 to 5 short, precise bullets. Each bullet is one complete-thought finding combining metric + movement or comparison + implication. No prose introduction.
+
 ## DASHBOARD ANALYSIS
 ALWAYS. The analytical core of the report. Output 3 to 5 topics. Each topic follows this exact shape:
 
@@ -121,9 +125,6 @@ Separate each topic from the next with a blank line. Aim for enough total conten
 
 Do not repeat content from EXECUTIVE SUMMARY or KEY FINDINGS. This section is the deeper interpretive layer.
 
-## KEY FINDINGS
-ALWAYS. Bullets only.
-- 3 to 5 short, precise bullets. Each bullet is one complete-thought finding combining metric + movement or comparison + implication. No prose introduction.
 
 ## AREAS OF CONCERN
 CONDITIONAL — include if material risks exist in the data. Bullets, optionally preceded by one short prose sentence framing the concerns.
