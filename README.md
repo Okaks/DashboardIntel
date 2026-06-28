@@ -40,41 +40,9 @@ The audience is not a checkbox. It is the central design decision. A CFO report 
 
 ## Getting started
 
-### Prerequisites
+Visit the live app at [dashboard-intel.vercel.app](https://dashboard-intel.vercel.app).
 
-- Node.js 18.17 or later
-- An Anthropic API key ([get one here](https://console.anthropic.com))
-
-### Installation
-
-```bash
-git clone https://github.com/Okaks/dashboardintel.git
-cd dashboardintel
-npm install
-```
-
-### Environment
-
-Create a `.env.local` file in the project root:
-
-```env
-ANTHROPIC_API_KEY=your_api_key_here
-```
-
-### Run locally
-
-```bash
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) in your browser.
-
-### Build for production
-
-```bash
-npm run build
-npm start
-```
+To run locally, clone the repo, add your Anthropic API key to `.env.local`, and run `npm install && npm run dev`.
 
 ---
 
